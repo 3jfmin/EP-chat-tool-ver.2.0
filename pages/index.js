@@ -1,54 +1,57 @@
-import { useEffect, useState } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../firebase'; // Firestoreの初期化ファイルをインポート
+import { useEffect, useState } from "react";
+import { db } from "../firebase";
+import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 
 export default function Home() {
   const [messages, setMessages] = useState([]);
-  const [showSplash, setShowSplash] = useState(true); // スプラッシュ画面を管理
-
-  useEffect(() => {
-    // スプラッシュ画面を2秒間表示
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 2000);
-
-    return () => clearTimeout(timer); // クリーンアップ
-  }, []);
+  const [newMessage, setNewMessage] = useState("");
 
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, 'messages'));
-        const messagesArray = querySnapshot.docs.map(doc => doc.data());
+        const querySnapshot = await getDocs(collection(db, "messages"));
+        const messagesArray = querySnapshot.docs.map((doc) => doc.data());
         setMessages(messagesArray);
       } catch (error) {
-        console.error('Error fetching messages:', error);
+        console.error("Error fetching messages:", error);
       }
     };
 
     fetchMessages();
   }, []);
 
-  if (showSplash) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-        <h1>EP-proxy-server</h1>
-      </div>
-    );
-  }
+  const sendMessage = async () => {
+    if (newMessage.trim()) {
+      try {
+        await addDoc(collection(db, "messages"), {
+          text: newMessage,
+          timestamp: serverTimestamp(),
+        });
+        setNewMessage("");
+      } catch (error) {
+        console.error("Error sending message:", error);
+      }
+    }
+  };
 
   return (
-    <div>
+    <div style={{ padding: "20px" }}>
       <h1>Welcome to the Chat</h1>
-      {messages.length > 0 ? (
-        <ul>
-          {messages.map((msg, index) => (
-            <li key={index}>{msg.text}</li>
-          ))}
-        </ul>
-      ) : (
-        <p>No messages yet.</p>
-      )}
+      <div style={{ margin: "20px 0" }}>
+        {messages.length > 0 ? (
+          messages.map((msg, idx) => <div key={idx}>{msg.text}</div>)
+        ) : (
+          <p>No messages yet.</p>
+        )}
+      </div>
+      <input
+        type="text"
+        value={newMessage}
+        onChange={(e) => setNewMessage(e.target.value)}
+        placeholder="Type your message here..."
+        style={{ marginRight: "10px" }}
+      />
+      <button onClick={sendMessage}>Send</button>
     </div>
   );
 }
